@@ -1,0 +1,165 @@
+﻿@page "/"
+@using PatientManagement.Client.Models
+@using PatientManagement.Client.Services
+@inject PatientService PatientService
+@rendermode InteractiveServer
+@inject IJSRuntime JSRuntime
+
+<h3>Patients</h3>
+
+<button class="btn btn-primary" @onclick="ShowModal">Add Patient</button>
+
+<AddEditPatient IsVisible="@isModalVisible" OnSave="HandleSave" OnCancel="HandleCancel" isEditing="@isEditing" selectedPatient="@selectedPatient"></AddEditPatient>
+
+@if (patients != null)
+{
+    <table class="table">
+        <thead>
+            <tr>
+                <th>Prefix</th>
+                <th>Firstname</th>
+                <th>Surname</th>
+                <th>Dob</th>
+                <th>Address</th>
+                <th>Email</th>
+                <th>Phone</th>
+                <th>Actions</th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (var patient in patients)
+            {
+                <tr>
+                    <td>@patient.Prefix</td>
+                    <td>@patient.Firstname</td>
+                    <td>@patient.Surname</td>
+                    <td>@patient.Dob?.ToString("dd/MM/yyyy")</td>
+                    <td>@patient.Address</td>
+                    <td>@patient.Email</td>
+                    <td>@patient.PhoneNumber</td>
+                    <td>
+                        <button class="btn btn-primary btn-sm" @onclick="() => EditPatient(patient.Id)">Edit</button>
+                        <button class="btn btn-danger btn-sm" data-bs-toggle="modal" data-bs-target="#deleteConfirmationModal" @onclick="() => ConfirmDelete(patient.Id)">Delete</button>
+                    </td>
+                </tr>
+            }
+        </tbody>
+    </table>
+}
+
+<div class="modal fade" id="deleteConfirmationModal" tabindex="-1" aria-labelledby="deleteConfirmationModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="deleteConfirmationModalLabel">Confirm Deletion</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                Are you sure you want to delete this patient?
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-danger btn-sm" @onclick="() => PerformDelete(deletePatientId)">Delete</button>
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">No</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+
+@code {
+    private bool isModalVisible = false;
+    private void ShowModal()
+    {
+        isEditing = false;
+        isModalVisible = true;
+        selectedPatient = new Patient();
+    }
+
+    private async Task HandleSave(Patient patient)
+    {
+        if (isEditing)
+        {
+            await PatientService.UpdatePatientAsync(patient);
+        }
+        else
+        {
+            await PatientService.AddPatientAsync(patient);
+        }
+
+        patients = await PatientService.GetPatientsAsync();
+        isModalVisible = false;
+    }
+
+    private void HandleCancel()
+    {
+        isModalVisible = false;
+    }
+
+    private Patient selectedPatient = new Patient();
+    private bool isFormVisible = false;
+    private bool isEditing = false;
+    private bool showDeleteConfirmation = false;
+    private int deletePatientId;
+
+
+    private List<Patient> patients;
+
+    protected override async Task OnInitializedAsync()
+    {
+        patients = await PatientService.GetPatientsAsync();
+    }
+
+    private async Task EditPatient(int id)
+    {
+        isEditing = true;
+        selectedPatient = await PatientService.GetPatientAsync(id);
+        isModalVisible = true;
+    }
+
+    private async Task DeletePatient(int id)
+    {
+        await PatientService.DeletePatientAsync(id);
+        patients = await PatientService.GetPatientsAsync();
+    }
+
+    private async Task ConfirmDelete(int id)
+    {
+        deletePatientId = id;
+        var confirmed = await JSRuntime.InvokeAsync<bool>("showDeleteConfirmation");
+        if (confirmed)
+        {
+            await PerformDelete(deletePatientId);
+        }
+    }
+
+    private async Task PerformDelete(int id)
+    {
+        await PatientService.DeletePatientAsync(id);
+        patients = await PatientService.GetPatientsAsync();
+    }
+
+    private void CancelDelete()
+    {
+        showDeleteConfirmation = false;
+    }
+
+    private async Task SavePatient()
+    {
+        if (isEditing)
+        {
+            await PatientService.UpdatePatientAsync(selectedPatient);
+        }
+        else
+        {
+            await PatientService.AddPatientAsync(selectedPatient);
+        }
+
+        patients = await PatientService.GetPatientsAsync();
+        isFormVisible = false;
+    }
+
+    private void CancelForm()
+    {
+        isFormVisible = false;
+    }
+}

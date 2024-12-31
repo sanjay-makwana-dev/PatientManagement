@@ -1,0 +1,82 @@
+﻿@using PatientManagement.Client.Models
+@code {
+    [Parameter] public bool IsVisible { get; set; }
+    [Parameter] public EventCallback<Patient> OnSave { get; set; }
+    [Parameter] public EventCallback OnCancel { get; set; }
+    [Parameter] public bool isEditing { get; set; }
+    [Parameter] public Patient selectedPatient { get; set; } = new Patient();
+
+    private void Save()
+    {
+        OnSave.InvokeAsync(selectedPatient);
+        selectedPatient = new Patient();
+    }
+
+    private void Cancel()
+    {
+        OnCancel.InvokeAsync();
+    }
+
+    private async Task HandleFileChange(InputFileChangeEventArgs e)
+    {
+        var file = e.File;
+        using var stream = new MemoryStream();
+        await file.OpenReadStream().CopyToAsync(stream);
+
+        selectedPatient.Attachment = Convert.ToBase64String(stream.ToArray());
+    }
+}
+
+@if (IsVisible)
+{
+    <div class="modal fade show" tabindex="-1" style="display:block;">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">@((isEditing ? "Edit Patient" : "Add Patient"))</h5>
+                    <button type="button" class="close" style="border: none;" @onclick="Cancel">
+                        <span>X</span>
+                    </button>
+                </div>
+                <div class="modal-body">
+                    <div class="form-group">
+                        <label for="prefix">Prefix:</label>
+                        <input type="text" id="prefix" class="form-control" @bind="selectedPatient.Prefix" />
+                    </div>
+                    <div class="form-group">
+                        <label for="firstName">First Name:</label>
+                        <input type="text" id="firstName" class="form-control" @bind="selectedPatient.Firstname" />
+                    </div>
+                    <div class="form-group">
+                        <label for="surname">Surname:</label>
+                        <input type="text" id="surname" class="form-control" @bind="selectedPatient.Surname" />
+                    </div>
+                    <div class="form-group">
+                        <label for="dob">Date of Birth:</label>
+                        <input type="date" id="dob" class="form-control" @bind="selectedPatient.Dob" />
+                    </div>
+                    <div class="form-group">
+                        <label for="address">Address:</label>
+                        <textarea id="address" class="form-control" @bind="selectedPatient.Address"></textarea>
+                    </div>
+                    <div class="form-group">
+                        <label for="attachment">Attachment:</label>
+                        <InputFile id="attachment" class="form-control" OnChange="HandleFileChange" />
+                    </div>
+                    <div class="form-group">
+                        <label for="email">Email:</label>
+                        <input type="email" id="email" class="form-control" @bind="selectedPatient.Email" />
+                    </div>
+                    <div class="form-group">
+                        <label for="phoneNumber">Phone Number:</label>
+                        <input type="number" id="phoneNumber" class="form-control" @bind="selectedPatient.PhoneNumber" />
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button class="btn btn-secondary" @onclick="Cancel">Cancel</button>
+                    <button class="btn btn-primary" @onclick="Save">Save</button>
+                </div>
+            </div>
+        </div>
+    </div>
+}
